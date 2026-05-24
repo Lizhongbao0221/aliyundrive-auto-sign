@@ -28,3 +28,10 @@ jobs:
         env:
           ALIYUN_REFRESH_TOKEN: ${{ secrets.ALIYUN_REFRESH_TOKEN }}
         run: python sign.py
+
+      - name: Update Refresh Token
+        uses: gliech/create-github-secret-action@v1
+        with:
+          name: ALIYUN_REFRESH_TOKEN
+          value: ${{ env.NEW_REFRESH_TOKEN }}
+          pa_token: ${{ secrets.GH_TOKEN }}
