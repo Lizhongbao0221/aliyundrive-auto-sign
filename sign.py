@@ -8,7 +8,7 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# 获取 access_token
+# 获取新 token
 url = "https://api.aliyundrive.com/v2/account/token"
 
 data = {
@@ -23,6 +23,13 @@ result = r.json()
 if "access_token" not in result:
     print("❌ refresh_token 已失效")
     exit()
+
+# 新 token
+new_refresh_token = result["refresh_token"]
+
+# 输出给 GitHub Actions
+with open(os.environ['GITHUB_ENV'], 'a') as f:
+    f.write(f"NEW_REFRESH_TOKEN={new_refresh_token}\n")
 
 access_token = result["access_token"]
 
