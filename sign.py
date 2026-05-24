@@ -1,6 +1,8 @@
 import requests
 import os
 import smtplib
+import json
+import base64
 
 from email.mime.text import MIMEText
 
@@ -10,11 +12,14 @@ from email.mime.text import MIMEText
 
 refresh_token = os.environ.get("ALIYUN_REFRESH_TOKEN")
 
-pushplus_token = os.environ.get("PUSHPLUS_TOKEN")
+serverchan_key = os.environ.get("SERVERCHAN_SENDKEY")
 
 email_user = os.environ.get("EMAIL_USER")
 email_pass = os.environ.get("EMAIL_PASS")
 email_to = os.environ.get("EMAIL_TO")
+
+github_token = os.environ.get("GH_TOKEN")
+github_repo = os.environ.get("GITHUB_REPOSITORY")
 
 headers = {
     "Content-Type": "application/json",
@@ -35,13 +40,12 @@ def send_email(subject, content):
         msg["From"] = email_user
         msg["To"] = email_to
 
+        # QQ邮箱 SMTP
         server = smtplib.SMTP_SSL(
-            "smtp.gmail.com",
+            "smtp.qq.com",
             465,
             timeout=30
         )
-
-        server.ehlo()
 
         server.login(email_user, email_pass)
 
@@ -61,28 +65,82 @@ def send_email(subject, content):
         print(e)
 
 # =========================
-# 微信通知
+# Server酱通知
 # =========================
 
-def send_wechat(title, content):
+def send_serverchan(title, content):
 
     try:
 
-        requests.get(
-            "https://www.pushplus.plus/send",
-            params={
-                "token": pushplus_token,
+        requests.post(
+            f"https://sctapi.ftqq.com/{serverchan_key}.send",
+            data={
                 "title": title,
-                "content": content
+                "desp": content
             },
             timeout=20
         )
 
-        print("✅ 微信通知发送成功")
+        print("✅ Server酱通知成功")
 
     except Exception as e:
 
-        print("❌ 微信通知失败")
+        print("❌ Server酱通知失败")
+        print(e)
+
+# =========================
+# 更新 GitHub Secret
+# =========================
+
+def update_github_secret(secret_name, secret_value):
+
+    try:
+
+        url = f"https://api.github.com/repos/{github_repo}/actions/secrets/public-key"
+
+        headers_auth = {
+            "Authorization": f"Bearer {github_token}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        r = requests.get(url, headers=headers_auth)
+
+        public_key = r.json()["key"]
+        key_id = r.json()["key_id"]
+
+        from nacl import encoding, public
+
+        public_key_obj = public.PublicKey(
+            public_key.encode("utf-8"),
+            encoding.Base64Encoder()
+        )
+
+        sealed_box = public.SealedBox(public_key_obj)
+
+        encrypted = sealed_box.encrypt(
+            secret_value.encode("utf-8")
+        )
+
+        encrypted_value = base64.b64encode(encrypted).decode("utf-8")
+
+        put_url = f"https://api.github.com/repos/{github_repo}/actions/secrets/{secret_name}"
+
+        data = {
+            "encrypted_value": encrypted_value,
+            "key_id": key_id
+        }
+
+        requests.put(
+            put_url,
+            headers=headers_auth,
+            data=json.dumps(data)
+        )
+
+        print("✅ refresh_token 已自动更新")
+
+    except Exception as e:
+
+        print("❌ GitHub Secret 更新失败")
         print(e)
 
 # =========================
@@ -113,7 +171,7 @@ except Exception as e:
 
     print(msg)
 
-    send_wechat(
+    send_serverchan(
         "阿里云盘签到失败",
         msg
     )
@@ -125,23 +183,17 @@ except Exception as e:
 
     exit()
 
-# =========================
-# token 失效
-# =========================
-
 if "access_token" not in result:
 
     msg = f"""
 ❌ refresh_token 已失效
-
-返回内容：
 
 {result}
 """
 
     print(msg)
 
-    send_wechat(
+    send_serverchan(
         "阿里云盘签到失败",
         msg
     )
@@ -159,17 +211,17 @@ if "access_token" not in result:
 
 new_refresh_token = result["refresh_token"]
 
-with open(os.environ['GITHUB_ENV'], 'a') as f:
-    f.write(f"NEW_REFRESH_TOKEN={new_refresh_token}\n")
-
-print("✅ refresh_token 已自动更新")
+update_github_secret(
+    "ALIYUN_REFRESH_TOKEN",
+    new_refresh_token
+)
 
 access_token = result["access_token"]
 
 print("✅ access_token 获取成功")
 
 # =========================
-# 开始签到
+# 签到
 # =========================
 
 try:
@@ -192,11 +244,11 @@ try:
 
 except Exception as e:
 
-    msg = f"❌ 签到请求失败\n\n{e}"
+    msg = f"❌ 签到失败\n\n{e}"
 
     print(msg)
 
-    send_wechat(
+    send_serverchan(
         "阿里云盘签到失败",
         msg
     )
@@ -207,10 +259,6 @@ except Exception as e:
     )
 
     exit()
-
-# =========================
-# 签到成功
-# =========================
 
 if sign_result.get("success"):
 
@@ -229,7 +277,7 @@ if sign_result.get("success"):
 
     print(msg)
 
-    send_wechat(
+    send_serverchan(
         "阿里云盘签到成功",
         msg
     )
@@ -239,23 +287,17 @@ if sign_result.get("success"):
         msg
     )
 
-# =========================
-# 签到失败
-# =========================
-
 else:
 
     msg = f"""
 ❌ 阿里云盘签到失败
-
-返回内容：
 
 {sign_result}
 """
 
     print(msg)
 
-    send_wechat(
+    send_serverchan(
         "阿里云盘签到失败",
         msg
     )
