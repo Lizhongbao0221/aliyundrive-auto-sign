@@ -22,8 +22,9 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install requests
-        run: pip install requests
+      - name: Install dependencies
+        run: |
+          pip install requests pynacl
 
       - name: Run sign
         env:
@@ -32,11 +33,5 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: python sign.py
-
-      - name: Update Refresh Token
-        uses: gliech/create-github-secret-action@v1
-        with:
-          name: ALIYUN_REFRESH_TOKEN
-          value: ${{ env.NEW_REFRESH_TOKEN }}
-          pa_token: ${{ secrets.GH_TOKEN }}
