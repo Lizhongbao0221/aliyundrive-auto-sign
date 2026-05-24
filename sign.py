@@ -3,8 +3,20 @@ import os
 import smtplib
 import json
 import base64
+import time
 
+from datetime import datetime
 from email.mime.text import MIMEText
+
+# =========================
+# 开始时间
+# =========================
+
+start_time = datetime.now()
+
+print(f"🚀 开始运行时间: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+start_timestamp = time.time()
 
 # =========================
 # 配置
@@ -167,7 +179,15 @@ try:
 
 except Exception as e:
 
-    msg = f"❌ 获取 token 失败\n\n{e}"
+    msg = f"""
+❌ 获取 token 失败
+
+🕒 开始时间：
+{start_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+错误信息：
+{e}
+"""
 
     print(msg)
 
@@ -188,6 +208,10 @@ if "access_token" not in result:
     msg = f"""
 ❌ refresh_token 已失效
 
+🕒 开始时间：
+{start_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+返回信息：
 {result}
 """
 
@@ -244,7 +268,15 @@ try:
 
 except Exception as e:
 
-    msg = f"❌ 签到失败\n\n{e}"
+    msg = f"""
+❌ 签到失败
+
+🕒 开始时间：
+{start_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+错误信息：
+{e}
+"""
 
     print(msg)
 
@@ -260,16 +292,34 @@ except Exception as e:
 
     exit()
 
+# =========================
+# 成功
+# =========================
+
 if sign_result.get("success"):
 
     count = sign_result["result"]["signInCount"]
 
     reward = sign_result["result"]["signInLogs"][count - 1]["reward"]["notice"]
 
+    end_time = datetime.now()
+
+    duration = round(time.time() - start_timestamp, 2)
+
     msg = f"""
 ✅ 阿里云盘签到成功
 
-📅 本月累计签到：{count} 天
+🕒 开始时间：
+{start_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+🏁 结束时间：
+{end_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+⏱ 运行耗时：
+{duration} 秒
+
+📅 本月累计签到：
+{count} 天
 
 🎁 今日奖励：
 {reward}
@@ -287,11 +337,29 @@ if sign_result.get("success"):
         msg
     )
 
+# =========================
+# 失败
+# =========================
+
 else:
+
+    end_time = datetime.now()
+
+    duration = round(time.time() - start_timestamp, 2)
 
     msg = f"""
 ❌ 阿里云盘签到失败
 
+🕒 开始时间：
+{start_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+🏁 结束时间：
+{end_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+⏱ 运行耗时：
+{duration} 秒
+
+返回信息：
 {sign_result}
 """
 
